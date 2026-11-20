@@ -1,3 +1,6 @@
 .runtime-tmp/
 __pycache__/
 *.py[cod]
+# Local run artifacts: the CLI work directory and its databases.
+/work/
+/result.json

@@ -1,0 +1,1864 @@
+{
+  "cases": [
+    {
+      "name": "cascade-and-multi-source",
+      "db": "case1.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c1-01",
+          "op": "object.create",
+          "object_id": "db",
+          "baseline": [
+            "db.read"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-02",
+          "op": "object.create",
+          "object_id": "app",
+          "baseline": [
+            "app.read"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-03",
+          "op": "dependency.add",
+          "from_object": "app",
+          "from_permission": "app.write",
+          "to_object": "db",
+          "to_permission": "db.read",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-04",
+          "op": "lease.grant",
+          "lease_id": "L1",
+          "object_id": "app",
+          "permissions": [
+            "app.write"
+          ],
+          "start": "2026-08-01T00:00:00Z",
+          "end": "2026-08-01T02:00:00Z",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-05",
+          "op": "object.get",
+          "object_id": "app",
+          "at": "2026-08-01T01:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-06",
+          "op": "plan.create",
+          "planned_at": "2026-08-01T01:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-07",
+          "op": "plan.apply",
+          "plan_id": "p000001",
+          "applied_at": "2026-08-01T01:30:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-08",
+          "op": "object.update",
+          "object_id": "db",
+          "baseline": [],
+          "at": "2026-08-01T01:45:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-09",
+          "op": "plan.create",
+          "planned_at": "2026-08-01T02:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-10",
+          "op": "plan.apply",
+          "plan_id": "p000002",
+          "applied_at": "2026-08-01T02:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c1-11",
+          "op": "object.get",
+          "object_id": "app",
+          "at": "2026-08-01T02:20:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": [
+              "app.read",
+              "app.write"
+            ]
+          }
+        },
+        {
+          "ok": true,
+          "equals": {
+            "summary.add_count": 1,
+            "summary.remove_count": 0
+          }
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "summary.remove_count": 2
+          }
+        },
+        {
+          "ok": true,
+          "equals": {
+            "events.0.object_id": "app",
+            "events.1.object_id": "db"
+          }
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": [
+              "app.read"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "stale-on-expiry",
+      "db": "case2.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c2-01",
+          "op": "object.create",
+          "object_id": "tmp",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c2-02",
+          "op": "lease.grant",
+          "lease_id": "L",
+          "object_id": "tmp",
+          "permissions": [
+            "run"
+          ],
+          "start": "2026-08-01T00:00:00Z",
+          "end": "2026-08-01T01:00:00Z",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c2-03",
+          "op": "plan.create",
+          "planned_at": "2026-08-01T00:30:00Z",
+          "objects": [
+            "tmp"
+          ]
+        },
+        {
+          "tenant": "t",
+          "request_id": "c2-04",
+          "op": "plan.apply",
+          "plan_id": "p000001",
+          "applied_at": "2026-08-01T01:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c2-05",
+          "op": "object.get",
+          "object_id": "tmp",
+          "at": "2026-08-01T01:00:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "additions": [
+              {
+                "object_id": "tmp",
+                "permission": "run"
+              }
+            ]
+          }
+        },
+        {
+          "ok": false,
+          "code": "stale",
+          "equals": {
+            "detail.applied": false,
+            "detail.reasons.0.kind": "target_changed",
+            "detail.reasons.0.expired_leases.0.lease_id": "L"
+          }
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.materialized": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "stale-on-recreate",
+      "db": "case3.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c3-01",
+          "op": "object.create",
+          "object_id": "a",
+          "baseline": [
+            "read"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c3-02",
+          "op": "object.recreate",
+          "object_id": "a",
+          "baseline": [
+            "read"
+          ],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c3-03",
+          "op": "plan.create",
+          "planned_at": "2026-08-01T00:20:00Z",
+          "objects": [
+            "a"
+          ]
+        },
+        {
+          "tenant": "t",
+          "request_id": "c3-04",
+          "op": "object.recreate",
+          "object_id": "a",
+          "baseline": [
+            "read"
+          ],
+          "at": "2026-08-01T00:30:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c3-05",
+          "op": "plan.apply",
+          "plan_id": "p000001",
+          "applied_at": "2026-08-01T00:40:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": false,
+          "code": "stale",
+          "equals": {
+            "detail.reasons.0.kind": "object_recreated"
+          }
+        }
+      ]
+    },
+    {
+      "name": "idempotency",
+      "db": "case4.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c4-01",
+          "op": "object.create",
+          "object_id": "x",
+          "baseline": [
+            "r"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c4-01",
+          "op": "object.create",
+          "object_id": "x",
+          "baseline": [
+            "r"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c4-01",
+          "op": "object.create",
+          "object_id": "x",
+          "baseline": [
+            "w"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c4-02",
+          "op": "object.create",
+          "object_id": "x",
+          "baseline": [
+            "r"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c4-03",
+          "op": "object.get",
+          "object_id": "x",
+          "at": "2026-08-01T00:00:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.object_version": 1
+          }
+        },
+        {
+          "ok": false,
+          "code": "request_id_conflict"
+        },
+        {
+          "ok": false,
+          "code": "already_exists"
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.object_version": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "exact-expiry-and-overlap",
+      "db": "case5.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c5-01",
+          "op": "object.create",
+          "object_id": "o",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c5-02",
+          "op": "lease.grant",
+          "lease_id": "LT",
+          "object_id": "o",
+          "permissions": [
+            "keep",
+            "temp"
+          ],
+          "start": "2026-08-01T00:00:00Z",
+          "end": "2026-08-01T01:00:00Z",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c5-03",
+          "op": "object.get",
+          "object_id": "o",
+          "at": "2026-08-01T00:59:59Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c5-04",
+          "op": "object.get",
+          "object_id": "o",
+          "at": "2026-08-01T01:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c5-05",
+          "op": "lease.revoke",
+          "lease_id": "LT",
+          "at": "2026-08-01T01:01:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c5-06",
+          "op": "object.get",
+          "object_id": "o",
+          "at": "2026-08-01T01:02:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": [
+              "keep",
+              "temp"
+            ]
+          }
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": [
+              "keep"
+            ]
+          }
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": [
+              "keep"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "attribute-reference",
+      "db": "case6.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c6-01",
+          "op": "object.create",
+          "object_id": "v",
+          "attributes": {
+            "tier": "gold"
+          },
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c6-02",
+          "op": "lease.grant",
+          "lease_id": "LV",
+          "object_id": "v",
+          "permissions": [
+            "admin"
+          ],
+          "attributes": {
+            "tier": "gold"
+          },
+          "start": "2026-08-01T00:00:00Z",
+          "end": "2026-08-01T02:00:00Z",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c6-03",
+          "op": "object.get",
+          "object_id": "v",
+          "at": "2026-08-01T00:30:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c6-04",
+          "op": "object.update",
+          "object_id": "v",
+          "attributes": {
+            "tier": "silver"
+          },
+          "at": "2026-08-01T01:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c6-05",
+          "op": "object.get",
+          "object_id": "v",
+          "at": "2026-08-01T01:30:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": [
+              "admin"
+            ]
+          }
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true,
+          "equals": {
+            "object.target": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "cycle-rejected",
+      "db": "case7.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c7-01",
+          "op": "object.create",
+          "object_id": "a",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c7-02",
+          "op": "object.create",
+          "object_id": "b",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c7-03",
+          "op": "dependency.add",
+          "from_object": "a",
+          "from_permission": "p",
+          "to_object": "b",
+          "to_permission": "q",
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c7-04",
+          "op": "dependency.add",
+          "from_object": "b",
+          "from_permission": "q",
+          "to_object": "a",
+          "to_permission": "p",
+          "at": "2026-08-01T00:00:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": false,
+          "code": "dependency_cycle"
+        }
+      ]
+    },
+    {
+      "name": "plan-limit",
+      "db": "case8.sqlite3",
+      "requests": [
+        {
+          "tenant": "t",
+          "request_id": "c8-00a",
+          "op": "object.create",
+          "object_id": "z00",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-00b",
+          "op": "object.update",
+          "object_id": "z00",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-01a",
+          "op": "object.create",
+          "object_id": "z01",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-01b",
+          "op": "object.update",
+          "object_id": "z01",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-02a",
+          "op": "object.create",
+          "object_id": "z02",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-02b",
+          "op": "object.update",
+          "object_id": "z02",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-03a",
+          "op": "object.create",
+          "object_id": "z03",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-03b",
+          "op": "object.update",
+          "object_id": "z03",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-04a",
+          "op": "object.create",
+          "object_id": "z04",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-04b",
+          "op": "object.update",
+          "object_id": "z04",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-05a",
+          "op": "object.create",
+          "object_id": "z05",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-05b",
+          "op": "object.update",
+          "object_id": "z05",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-06a",
+          "op": "object.create",
+          "object_id": "z06",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-06b",
+          "op": "object.update",
+          "object_id": "z06",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-07a",
+          "op": "object.create",
+          "object_id": "z07",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-07b",
+          "op": "object.update",
+          "object_id": "z07",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-08a",
+          "op": "object.create",
+          "object_id": "z08",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-08b",
+          "op": "object.update",
+          "object_id": "z08",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-09a",
+          "op": "object.create",
+          "object_id": "z09",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-09b",
+          "op": "object.update",
+          "object_id": "z09",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-10a",
+          "op": "object.create",
+          "object_id": "z10",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-10b",
+          "op": "object.update",
+          "object_id": "z10",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-11a",
+          "op": "object.create",
+          "object_id": "z11",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-11b",
+          "op": "object.update",
+          "object_id": "z11",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-12a",
+          "op": "object.create",
+          "object_id": "z12",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-12b",
+          "op": "object.update",
+          "object_id": "z12",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-13a",
+          "op": "object.create",
+          "object_id": "z13",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-13b",
+          "op": "object.update",
+          "object_id": "z13",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-14a",
+          "op": "object.create",
+          "object_id": "z14",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-14b",
+          "op": "object.update",
+          "object_id": "z14",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-15a",
+          "op": "object.create",
+          "object_id": "z15",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-15b",
+          "op": "object.update",
+          "object_id": "z15",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-16a",
+          "op": "object.create",
+          "object_id": "z16",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-16b",
+          "op": "object.update",
+          "object_id": "z16",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-17a",
+          "op": "object.create",
+          "object_id": "z17",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-17b",
+          "op": "object.update",
+          "object_id": "z17",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-18a",
+          "op": "object.create",
+          "object_id": "z18",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-18b",
+          "op": "object.update",
+          "object_id": "z18",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-19a",
+          "op": "object.create",
+          "object_id": "z19",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-19b",
+          "op": "object.update",
+          "object_id": "z19",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-20a",
+          "op": "object.create",
+          "object_id": "z20",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-20b",
+          "op": "object.update",
+          "object_id": "z20",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-21a",
+          "op": "object.create",
+          "object_id": "z21",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-21b",
+          "op": "object.update",
+          "object_id": "z21",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-22a",
+          "op": "object.create",
+          "object_id": "z22",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-22b",
+          "op": "object.update",
+          "object_id": "z22",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-23a",
+          "op": "object.create",
+          "object_id": "z23",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-23b",
+          "op": "object.update",
+          "object_id": "z23",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-24a",
+          "op": "object.create",
+          "object_id": "z24",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-24b",
+          "op": "object.update",
+          "object_id": "z24",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-25a",
+          "op": "object.create",
+          "object_id": "z25",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-25b",
+          "op": "object.update",
+          "object_id": "z25",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-26a",
+          "op": "object.create",
+          "object_id": "z26",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-26b",
+          "op": "object.update",
+          "object_id": "z26",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-27a",
+          "op": "object.create",
+          "object_id": "z27",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-27b",
+          "op": "object.update",
+          "object_id": "z27",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-28a",
+          "op": "object.create",
+          "object_id": "z28",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-28b",
+          "op": "object.update",
+          "object_id": "z28",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-29a",
+          "op": "object.create",
+          "object_id": "z29",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-29b",
+          "op": "object.update",
+          "object_id": "z29",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-30a",
+          "op": "object.create",
+          "object_id": "z30",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-30b",
+          "op": "object.update",
+          "object_id": "z30",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-31a",
+          "op": "object.create",
+          "object_id": "z31",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-31b",
+          "op": "object.update",
+          "object_id": "z31",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-32a",
+          "op": "object.create",
+          "object_id": "z32",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-32b",
+          "op": "object.update",
+          "object_id": "z32",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-33a",
+          "op": "object.create",
+          "object_id": "z33",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-33b",
+          "op": "object.update",
+          "object_id": "z33",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-34a",
+          "op": "object.create",
+          "object_id": "z34",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-34b",
+          "op": "object.update",
+          "object_id": "z34",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-35a",
+          "op": "object.create",
+          "object_id": "z35",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-35b",
+          "op": "object.update",
+          "object_id": "z35",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-36a",
+          "op": "object.create",
+          "object_id": "z36",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-36b",
+          "op": "object.update",
+          "object_id": "z36",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-37a",
+          "op": "object.create",
+          "object_id": "z37",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-37b",
+          "op": "object.update",
+          "object_id": "z37",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-38a",
+          "op": "object.create",
+          "object_id": "z38",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-38b",
+          "op": "object.update",
+          "object_id": "z38",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-39a",
+          "op": "object.create",
+          "object_id": "z39",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-39b",
+          "op": "object.update",
+          "object_id": "z39",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-40a",
+          "op": "object.create",
+          "object_id": "z40",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-40b",
+          "op": "object.update",
+          "object_id": "z40",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-41a",
+          "op": "object.create",
+          "object_id": "z41",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-41b",
+          "op": "object.update",
+          "object_id": "z41",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-42a",
+          "op": "object.create",
+          "object_id": "z42",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-42b",
+          "op": "object.update",
+          "object_id": "z42",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-43a",
+          "op": "object.create",
+          "object_id": "z43",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-43b",
+          "op": "object.update",
+          "object_id": "z43",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-44a",
+          "op": "object.create",
+          "object_id": "z44",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-44b",
+          "op": "object.update",
+          "object_id": "z44",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-45a",
+          "op": "object.create",
+          "object_id": "z45",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-45b",
+          "op": "object.update",
+          "object_id": "z45",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-46a",
+          "op": "object.create",
+          "object_id": "z46",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-46b",
+          "op": "object.update",
+          "object_id": "z46",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-47a",
+          "op": "object.create",
+          "object_id": "z47",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-47b",
+          "op": "object.update",
+          "object_id": "z47",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-48a",
+          "op": "object.create",
+          "object_id": "z48",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-48b",
+          "op": "object.update",
+          "object_id": "z48",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-49a",
+          "op": "object.create",
+          "object_id": "z49",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-49b",
+          "op": "object.update",
+          "object_id": "z49",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-50a",
+          "op": "object.create",
+          "object_id": "z50",
+          "baseline": [
+            "keep"
+          ],
+          "at": "2026-08-01T00:00:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-50b",
+          "op": "object.update",
+          "object_id": "z50",
+          "baseline": [],
+          "at": "2026-08-01T00:10:00Z"
+        },
+        {
+          "tenant": "t",
+          "request_id": "c8-plan",
+          "op": "plan.create",
+          "planned_at": "2026-08-01T00:30:00Z"
+        }
+      ],
+      "expect": [
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": true
+        },
+        {
+          "ok": false,
+          "code": "plan_limit_exceeded"
+        }
+      ]
+    }
+  ]
+}
